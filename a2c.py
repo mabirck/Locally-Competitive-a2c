@@ -11,10 +11,10 @@ from baselines.common import set_global_seeds, explained_variance
 from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
 from baselines.common.atari_wrappers import wrap_deepmind
 
-from baselines.a2c.utils import discount_with_dones
-from baselines.a2c.utils import Scheduler, make_path, find_trainable_variables
-from baselines.a2c.policies import CnnPolicy
-from baselines.a2c.utils import cat_entropy, mse
+from utils import discount_with_dones
+from utils import Scheduler, make_path, find_trainable_variables
+from policies import CnnPolicy
+from utils import cat_entropy, mse
 
 class Model(object):
 
@@ -174,6 +174,8 @@ def learn(policy, env, seed, nsteps=5, nstack=4, total_timesteps=int(80e6), vf_c
         fps = int((update*nbatch)/nseconds)
         if update % log_interval == 0 or update == 1:
             ev = explained_variance(values, rewards)
+            #print(rewards)
+            logger.record_tabular("mean rewards", float(np.mean(rewards)))
             logger.record_tabular("nupdates", update)
             logger.record_tabular("total_timesteps", update*nbatch)
             logger.record_tabular("fps", fps)
