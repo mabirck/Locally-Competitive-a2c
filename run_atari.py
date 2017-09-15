@@ -13,8 +13,18 @@ def train(args, env_id, num_frames, seed, policy, lrschedule, num_cpu):
     # divide by 4 due to frameskip, then do a little extras so episodes end
     def make_env(rank):
         def _thunk():
-            PATH = './{}/{}'.format(args.log_dir,env_id)
-            env = gym.make(env_id)
+
+            MT = ""
+            if len(env_id) > 1:
+                MT = "{}_{}/".format(env_id[0][:4], env_id[1][:4])
+            ### CREATING MULTIPLE GAMES ENVS ###
+            if(rank < num_cpu//2 or len(env_id) == 1): # <<--- CHECKING WHETHER IS MULTITASK
+                PATH = './{}/{}{}'.format(args.log_dir,MT,env_id[0])
+                env = gym.make(env_id[0])
+            else:
+                PATH = './{}/{}{}'.format(args.log_dir,MT,env_id[1])
+                env = gym.make(env_id[1])
+
             env.seed(seed + rank)
             if not(os.path.exists(PATH)):
                 os.makedirs(PATH)
@@ -37,7 +47,9 @@ def train(args, env_id, num_frames, seed, policy, lrschedule, num_cpu):
 def main():
     import argparse
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--env', help='environment ID', default='BreakoutNoFrameskip-v4')
+    #######REMEMBER COOL THING TO MAKE ARGPARSE RECEIVE LIST OF STRINGS####################################
+    parser.add_argument('--env', help='environments ID', nargs='*', default=['BreakoutNoFrameskip-v4'])##
+    ####################################################################################################
     parser.add_argument('--seed', help='RNG seed', type=int, default=0)
     parser.add_argument('--policy', help='Policy architecture', choices=['cnn', 'lstm', 'lnlstm'], default='lstm')
     parser.add_argument('--lrschedule', help='Learning rate schedule', choices=['constant', 'linear'], default='constant')
