@@ -4,6 +4,8 @@ from utils import conv, fc, conv_to_fc, batch_to_seq, seq_to_batch, lstm, lnlstm
 from baselines.common.distributions import make_pdtype
 import baselines.common.tf_util as U
 import gym
+from maxout import max_out
+
 
 class LnLstmPolicy(object):
     def __init__(self, sess, ob_space, ac_space, nenv, nsteps, nstack, nlstm=256, reuse=False):
