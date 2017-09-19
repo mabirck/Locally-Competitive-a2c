@@ -4,7 +4,7 @@ from utils import conv, fc, conv_to_fc, batch_to_seq, seq_to_batch, lstm, lnlstm
 from baselines.common.distributions import make_pdtype
 import baselines.common.tf_util as U
 import gym
-from maxout import max_out
+from  tfmaxout.maxout import max_out
 
 
 class LnLstmPolicy(object):
@@ -64,7 +64,8 @@ class LstmPolicy(object):
             h3 = conv(h2, 'c3', nf=64, rf=3, stride=1, init_scale=np.sqrt(2))
             h3 = conv_to_fc(h3)
             h4 = fc(h3, 'fc1', nh=512, init_scale=np.sqrt(2))
-            xs = batch_to_seq(h4, nenv, nsteps)
+            h4_max = max_out(h4, 256)
+            xs = batch_to_seq(h4_max, nenv, nsteps)
             ms = batch_to_seq(M, nenv, nsteps)
             h5, snew = lstm(xs, ms, S, 'lstm1', nh=nlstm)
             h5 = seq_to_batch(h5)
@@ -104,6 +105,8 @@ class CnnPolicy(object):
             h3 = conv(h2, 'c3', nf=64, rf=3, stride=1, init_scale=np.sqrt(2))
             h3 = conv_to_fc(h3)
             h4 = fc(h3, 'fc1', nh=512, init_scale=np.sqrt(2))
+            #h4_mx = max_out(h4, num_units=256)
+            #pi = fc(h4_mx, 'pi', nact, act=lambda x:x)
             pi = fc(h4, 'pi', nact, act=lambda x:x)
             vf = fc(h4, 'v', 1, act=lambda x:x)
 
