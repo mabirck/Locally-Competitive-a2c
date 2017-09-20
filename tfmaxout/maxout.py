@@ -23,8 +23,13 @@ Raises:
 """
 
 
-def max_out(inputs, num_units, axis=None):
+def max_out(inputs, num_units=None, axis=None):
     shape = inputs.get_shape().as_list()
+
+    if num_units == None:
+        num_units = hape = inputs.get_shape().as_list()[-1]
+
+
     if shape[0] is None:
         shape[0] = -1
     if axis is None:  # Assume that channel is the last dimension
