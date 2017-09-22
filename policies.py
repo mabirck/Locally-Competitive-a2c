@@ -83,7 +83,7 @@ class LstmPolicy(object):
         S = tf.placeholder(tf.float32, [nenv, nlstm*2]) #states
         with tf.variable_scope("model", reuse=reuse):
             h = conv(tf.cast(X, tf.float32)/255., 'c1', nf=32*C, rf=8, stride=4,act=act_f, init_scale=np.sqrt(2))
-            h2 = conv(h, 'c2', nf=64*C, rf=4, stride=2, init_scale=np.sqrt(2))
+            h2 = conv(h, 'c2', nf=64*C, rf=4, stride=2, act=act_f, init_scale=np.sqrt(2))
             h3 = conv(h2, 'c3', nf=64*C, rf=3, stride=1, act=act_f, init_scale=np.sqrt(2))
             h3 = conv_to_fc(h3)
             h4 = fc(h3, 'fc1', nh=512, init_scale=np.sqrt(2))
