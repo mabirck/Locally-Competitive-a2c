@@ -45,7 +45,9 @@ def conv(x, scope, nf, rf, stride, pad='VALID', act=tf.nn.relu, init_scale=1.0):
         w = tf.get_variable("w", [rf, rf, nin, nf], initializer=ortho_init(init_scale))
         b = tf.get_variable("b", [nf], initializer=tf.constant_initializer(0.0))
         z = tf.nn.conv2d(x, w, strides=[1, stride, stride, 1], padding=pad)+b
+        #print("Before",z.get_shape())
         h = act(z)
+        #print("After",h.get_shape())
         return h
 
 def fc(x, scope, nh, act=tf.nn.relu, init_scale=1.0):

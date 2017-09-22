@@ -27,7 +27,8 @@ def max_out(inputs, num_units=None, axis=None):
     shape = inputs.get_shape().as_list()
 
     if num_units == None:
-        num_units = hape = inputs.get_shape().as_list()[-1]
+        num_units = inputs.get_shape().as_list()[-1]//2
+        #print("NUM UNITS", num_units)
 
 
     if shape[0] is None:
