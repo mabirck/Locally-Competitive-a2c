@@ -86,7 +86,7 @@ class LstmPolicy(object):
             h2 = conv(h, 'c2', nf=64*C, rf=4, stride=2, init_scale=np.sqrt(2))
             h3 = conv(h2, 'c3', nf=64*C, rf=3, stride=1, act=act_f, init_scale=np.sqrt(2))
             h3 = conv_to_fc(h3)
-            h4 = fc(h3, 'fc1', nh=512, act = act_f, init_scale=np.sqrt(2))
+            h4 = fc(h3, 'fc1', nh=512, init_scale=np.sqrt(2))
             xs = batch_to_seq(h4, nenv, nsteps)
             ms = batch_to_seq(M, nenv, nsteps)
             h5, snew = lstm(xs, ms, S, 'lstm1', nh=nlstm)

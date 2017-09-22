@@ -55,7 +55,7 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     #######REMEMBER COOL THING TO MAKE ARGPARSE RECEIVE LIST OF STRINGS####################################
-    parser.add_argument('--env', help='environments ID', nargs='*', default=['BreakoutNoFrameskip-v4'])##
+    parser.add_argument('--env', help='environments ID', nargs='*', default=['Breakout'])##
     ####################################################################################################
     parser.add_argument('--seed', help='RNG seed', type=int, default=0)
     parser.add_argument('--policy', help='Policy architecture', choices=['cnn', 'lstm', 'lnlstm'], default='lstm')
