@@ -13,6 +13,8 @@ from policies import CnnPolicy, LstmPolicy, LnLstmPolicy
 
 def train(args, env_id, num_frames, seed, policy, lrschedule, num_cpu):
     num_timesteps = int(num_frames / 4 * 1.1)
+    if len(env_id) > 1:
+        num_timesteps = int(num_timesteps * 2)
     DM_STYLE = "NoFrameskip-v4"
     # divide by 4 due to frameskip, then do a little extras so episodes end
     def make_env(rank):
@@ -64,6 +66,8 @@ def main():
     parser.add_argument('--million_frames', help='How many frames to train (/ 1e6). '
         'This number gets divided by 4 due to frameskip', type=int, default=100)
     parser.add_argument('--log_dir', help='Log dir', type=str, default='log')
+    parser.add_argument('--exp', help='Exploration Strategies', choices=['ent', 'thompson'], default='ent')
+
     args = parser.parse_args()
     train(args, args.env, num_frames=1e6 * args.million_frames, seed=args.seed,
         policy=args.policy, lrschedule=args.lrschedule, num_cpu=8)
