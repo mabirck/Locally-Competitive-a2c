@@ -24,10 +24,10 @@ def train(args, env_id, num_frames, seed, policy, lrschedule, num_cpu):
                 MT = "{}_{}/".format(env_id[0][:4], env_id[1][:4])
             ### CREATING MULTIPLE GAMES ENVS ###
             if(rank < num_cpu//2 or len(env_id) == 1): # <<--- CHECKING WHETHER IS MULTITASK
-                PATH = './{}/{}{}'.format(args.log_dir,MT,env_id[0]+DM_STYLE)
+                PATH = './{}/{}{}_{}'.format(args.log_dir,MT, env_id[0]+DM_STYLE, args.act_func)
                 env = gym.make(env_id[0]+DM_STYLE)
             else:
-                PATH = './{}/{}{}'.format(args.log_dir,MT,env_id[1]+DM_STYLE)
+                PATH = './{}/{}{}_{}'.format(args.log_dir,MT,env_id[1]+DM_STYLE, args.act_func)
                 env = gym.make(env_id[1]+DM_STYLE)
 
             env.seed(seed + rank)
