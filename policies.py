@@ -60,7 +60,7 @@ class LnLstmPolicy(object):
         self.value = value
 
 class LstmPolicy(object):
-    def __init__(self, sess, act_f, ob_space, ac_space, nenv, nsteps, nstack, nlstm=256, reuse=False):
+    def __init__(self, sess, act_f, drop, ob_space, ac_space, nenv, nsteps, nstack, nlstm=256, reuse=False):
 
         ################################################################
         C = 1
@@ -87,12 +87,15 @@ class LstmPolicy(object):
             h3 = conv(h2, 'c3', nf=64*C, rf=3, stride=1, act=act_f, init_scale=np.sqrt(2))
             h3 = conv_to_fc(h3)
             h4 = fc(h3, 'fc1', nh=512, init_scale=np.sqrt(2))
-            xs = batch_to_seq(h4, nenv, nsteps)
+            h4_drop = tf.nn.dropout(h4, drop)
+            xs = batch_to_seq(h4_drop, nenv, nsteps)
             ms = batch_to_seq(M, nenv, nsteps)
             h5, snew = lstm(xs, ms, S, 'lstm1', nh=nlstm)
             h5 = seq_to_batch(h5)
-            pi = fc(h5, 'pi', nact, act=lambda x:x)
-            vf = fc(h5, 'v', 1, act=lambda x:x)
+            h5_drop = tf.nn.dropout(h5, drop)
+            pi = fc(h5_drop, 'pi', nact, act=lambda x:x)
+            vf = fc(h5_drop, 'v', 1, act=lambda x:x)
+            #print(drop)
 
         v0 = vf[:, 0]
         a0 = sample(pi)

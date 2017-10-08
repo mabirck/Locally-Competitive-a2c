@@ -50,7 +50,7 @@ def train(args, env_id, num_frames, seed, policy, lrschedule, num_cpu):
         policy_fn = LstmPolicy
     elif policy == 'lnlstm':
         policy_fn = LnLstmPolicy
-    learn(policy_fn, env, seed, args.act_func, total_timesteps=num_timesteps, lrschedule=lrschedule)
+    learn(policy_fn, env, seed, args.act_func, args.dropout, total_timesteps=num_timesteps, lrschedule=lrschedule)
     env.close()
 
 def main():
@@ -67,6 +67,7 @@ def main():
         'This number gets divided by 4 due to frameskip', type=int, default=100)
     parser.add_argument('--log_dir', help='Log dir', type=str, default='log')
     parser.add_argument('--exp', help='Exploration Strategies', choices=['ent', 'thompson'], default='ent')
+    parser.add_argument('--dropout', help='Exploration Strategies', type=float, default=1.0)
 
     args = parser.parse_args()
     train(args, args.env, num_frames=1e6 * args.million_frames, seed=args.seed,
