@@ -170,6 +170,7 @@ def learn(policy, env, seed, act_f, drop_initial, nsteps=5, nstack=4, total_time
     tstart = time.time()
     drop = drop_initial
     for update in range(1, total_timesteps//nbatch+1):
+        #print("This is the current dropout: ",1 - drop)
         if drop < 1.0 and ((update * nsteps) < int(total_timesteps * 0.1)):
             drop += (nsteps*(1.0 - drop_initial) / total_timesteps)
         #print("this is update", update, " and this is the drop", drop)

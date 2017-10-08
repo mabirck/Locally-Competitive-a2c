@@ -21,13 +21,16 @@ def train(args, env_id, num_frames, seed, policy, lrschedule, num_cpu):
         def _thunk():
             MT = ""
             if len(env_id) > 1:
-                MT = "{}_{}/".format(env_id[0][:4], env_id[1][:4])
+                MT = "{}_{}_{}/".format(env_id[0][:4], env_id[1][:4], args.act_func)
+            else:
+                MT = "{}_{}/".format(env_id[0]+DM_STYLE, args.act_func)
+
             ### CREATING MULTIPLE GAMES ENVS ###
             if(rank < num_cpu//2 or len(env_id) == 1): # <<--- CHECKING WHETHER IS MULTITASK
-                PATH = './{}/{}{}_{}'.format(args.log_dir,MT, env_id[0]+DM_STYLE, args.act_func)
+                PATH = './{}/{}{}'.format(args.log_dir,MT, env_id[0]+DM_STYLE)
                 env = gym.make(env_id[0]+DM_STYLE)
             else:
-                PATH = './{}/{}{}_{}'.format(args.log_dir,MT,env_id[1]+DM_STYLE, args.act_func)
+                PATH = './{}/{}{}'.format(args.log_dir,MT,env_id[1]+DM_STYLE)
                 env = gym.make(env_id[1]+DM_STYLE)
 
             env.seed(seed + rank)
@@ -67,7 +70,7 @@ def main():
         'This number gets divided by 4 due to frameskip', type=int, default=100)
     parser.add_argument('--log_dir', help='Log dir', type=str, default='log')
     parser.add_argument('--exp', help='Exploration Strategies', choices=['ent', 'thompson'], default='ent')
-    parser.add_argument('--dropout', help='Exploration Strategies', type=float, default=0.1)
+    parser.add_argument('--dropout', help='Exploration Strategies', type=float, default=0.9)
 
     args = parser.parse_args()
     train(args, args.env, num_frames=1e6 * args.million_frames, seed=args.seed,
