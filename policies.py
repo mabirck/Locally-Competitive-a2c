@@ -60,7 +60,7 @@ class LnLstmPolicy(object):
         self.value = value
 
 class LstmPolicy(object):
-    def __init__(self, sess, act_f, drop, ob_space, ac_space, nenv, nsteps, nstack, nlstm=256, reuse=False):
+    def __init__(self, sess, act_f, ob_space, ac_space, nenv, nsteps, nstack, nlstm=256, reuse=False):
 
         ################################################################
         C = 1
@@ -71,7 +71,8 @@ class LstmPolicy(object):
             # Constant which multiplies model by 2 in case of maxout
             C = 2
         ################################################################
-
+        keep_prob = tf.placeholder(tf.float32)
+        ################################################################
 
 
         nbatch = nenv*nsteps
@@ -87,12 +88,12 @@ class LstmPolicy(object):
             h3 = conv(h2, 'c3', nf=64*C, rf=3, stride=1, act=act_f, init_scale=np.sqrt(2))
             h3 = conv_to_fc(h3)
             h4 = fc(h3, 'fc1', nh=512, init_scale=np.sqrt(2))
-            h4_drop = tf.nn.dropout(h4, drop)
+            h4_drop = tf.nn.dropout(h4, keep_prob)
             xs = batch_to_seq(h4_drop, nenv, nsteps)
             ms = batch_to_seq(M, nenv, nsteps)
             h5, snew = lstm(xs, ms, S, 'lstm1', nh=nlstm)
             h5 = seq_to_batch(h5)
-            h5_drop = tf.nn.dropout(h5, drop)
+            h5_drop = tf.nn.dropout(h5, keep_prob)
             pi = fc(h5_drop, 'pi', nact, act=lambda x:x)
             vf = fc(h5_drop, 'v', 1, act=lambda x:x)
             #print(drop)
@@ -101,12 +102,12 @@ class LstmPolicy(object):
         a0 = sample(pi)
         self.initial_state = np.zeros((nenv, nlstm*2), dtype=np.float32)
 
-        def step(ob, state, mask):
-            a, v, s = sess.run([a0, v0, snew], {X:ob, S:state, M:mask})
+        def step(ob, state, mask, drop):
+            a, v, s = sess.run([a0, v0, snew], {X:ob, S:state, M:mask, keep_prob:drop})
             return a, v, s
 
-        def value(ob, state, mask):
-            return sess.run(v0, {X:ob, S:state, M:mask})
+        def value(ob, state, mask, drop):
+            return sess.run(v0, {X:ob, S:state, M:mask, keep_prob:drop})
 
         self.X = X
         self.M = M
@@ -115,6 +116,7 @@ class LstmPolicy(object):
         self.vf = vf
         self.step = step
         self.value = value
+        self.keep_prob = keep_prob
 
 class CnnPolicy(object):
 

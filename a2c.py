@@ -18,7 +18,7 @@ from utils import cat_entropy, mse
 
 class Model(object):
 
-    def __init__(self, policy, ob_space, ac_space, drop, nenvs, nsteps, nstack, num_procs, act_f,
+    def __init__(self, policy, ob_space, ac_space, nenvs, nsteps, nstack, num_procs, act_f,
             ent_coef=0.01, vf_coef=0.5, max_grad_norm=0.5, lr=7e-4,
             alpha=0.99, epsilon=1e-5, total_timesteps=int(80e6), lrschedule='linear'):
         config = tf.ConfigProto(allow_soft_placement=True,
@@ -34,8 +34,8 @@ class Model(object):
         R = tf.placeholder(tf.float32, [nbatch])
         LR = tf.placeholder(tf.float32, [])
 
-        step_model = policy(sess, act_f, drop, ob_space, ac_space, nenvs, 1, nstack, reuse=False)
-        train_model = policy(sess, act_f, drop, ob_space, ac_space, nenvs, nsteps, nstack, reuse=True)
+        step_model = policy(sess, act_f, ob_space, ac_space, nenvs, 1, nstack, reuse=False)
+        train_model = policy(sess, act_f, ob_space, ac_space, nenvs, nsteps, nstack, reuse=True)
 
         neglogpac = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=train_model.pi, labels=A)
         pg_loss = tf.reduce_mean(ADV * neglogpac)
@@ -53,11 +53,11 @@ class Model(object):
 
         lr = Scheduler(v=lr, nvalues=total_timesteps, schedule=lrschedule)
 
-        def train(obs, states, rewards, masks, actions, values):
+        def train(obs, states, rewards, masks, actions, values, drop):
             advs = rewards - values
             for step in range(len(obs)):
                 cur_lr = lr.value()
-            td_map = {train_model.X:obs, A:actions, ADV:advs, R:rewards, LR:cur_lr}
+            td_map = {train_model.X:obs, A:actions, ADV:advs, R:rewards, LR:cur_lr, train_model.keep_prob:drop}
             if states != []:
                 td_map[train_model.S] = states
                 td_map[train_model.M] = masks
@@ -110,11 +110,12 @@ class Runner(object):
         # IPC overhead
         self.obs = np.roll(self.obs, shift=-1, axis=3)
         self.obs[:, :, :, -1] = obs[:, :, :, 0]
-    def run(self):
+    def run(self, drop):
         mb_obs, mb_rewards, mb_actions, mb_values, mb_dones = [],[],[],[],[]
         mb_states = self.states
         for n in range(self.nsteps):
-            actions, values, states = self.model.step(self.obs, self.states, self.dones)
+            #print("This is the step", n)
+            actions, values, states = self.model.step(self.obs, self.states, self.dones, drop)
             mb_obs.append(np.copy(self.obs))
             mb_actions.append(actions)
             mb_values.append(values)
@@ -136,7 +137,7 @@ class Runner(object):
         mb_dones = np.asarray(mb_dones, dtype=np.bool).swapaxes(1, 0)
         mb_masks = mb_dones[:, :-1]
         mb_dones = mb_dones[:, 1:]
-        last_values = self.model.value(self.obs, self.states, self.dones).tolist()
+        last_values = self.model.value(self.obs, self.states, self.dones, drop).tolist()
         #discount/bootstrap off value fn
         for n, (rewards, dones, value) in enumerate(zip(mb_rewards, mb_dones, last_values)):
             rewards = rewards.tolist()
@@ -152,7 +153,7 @@ class Runner(object):
         mb_masks = mb_masks.flatten()
         return mb_obs, mb_states, mb_rewards, mb_masks, mb_actions, mb_values
 
-def learn(policy, env, seed, act_f, drop, nsteps=5, nstack=4, total_timesteps=int(80e6), vf_coef=0.5, ent_coef=0.01, max_grad_norm=0.5, lr=7e-4, lrschedule='linear', epsilon=1e-5, alpha=0.99, gamma=0.99, log_interval=100):
+def learn(policy, env, seed, act_f, drop_initial, nsteps=5, nstack=4, total_timesteps=int(80e6), vf_coef=0.5, ent_coef=0.01, max_grad_norm=0.5, lr=7e-4, lrschedule='linear', epsilon=1e-5, alpha=0.99, gamma=0.99, log_interval=100):
 
 
     tf.reset_default_graph()
@@ -162,14 +163,18 @@ def learn(policy, env, seed, act_f, drop, nsteps=5, nstack=4, total_timesteps=in
     ob_space = env.observation_space
     ac_space = env.action_space
     num_procs = len(env.remotes) # HACK
-    model = Model(policy=policy, ob_space=ob_space, ac_space=ac_space, drop=drop, nenvs=nenvs, nsteps=nsteps, nstack=nstack, num_procs=num_procs, act_f=act_f, ent_coef=ent_coef, vf_coef=vf_coef,
+    model = Model(policy=policy, ob_space=ob_space, ac_space=ac_space, nenvs=nenvs, nsteps=nsteps, nstack=nstack, num_procs=num_procs, act_f=act_f, ent_coef=ent_coef, vf_coef=vf_coef,
         max_grad_norm=max_grad_norm, lr=lr, alpha=alpha, epsilon=epsilon, total_timesteps=total_timesteps, lrschedule=lrschedule)
     runner = Runner(env, model, nsteps=nsteps, nstack=nstack, gamma=gamma)
     nbatch = nenvs*nsteps
     tstart = time.time()
+    drop = drop_initial
     for update in range(1, total_timesteps//nbatch+1):
-        obs, states, rewards, masks, actions, values = runner.run()
-        policy_loss, value_loss, policy_entropy = model.train(obs, states, rewards, masks, actions, values)
+        if drop < 1.0 and ((update * nsteps) < int(total_timesteps * 0.1)):
+            drop += (nsteps*(1.0 - drop_initial) / total_timesteps)
+        #print("this is update", update, " and this is the drop", drop)
+        obs, states, rewards, masks, actions, values = runner.run(drop)
+        policy_loss, value_loss, policy_entropy = model.train(obs, states, rewards, masks, actions, values, drop)
         nseconds = time.time()-tstart
         fps = int((update*nbatch)/nseconds)
         if update % log_interval == 0 or update == 1:
