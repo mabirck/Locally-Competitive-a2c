@@ -41,7 +41,9 @@ class Model(object):
         pg_loss = tf.reduce_mean(ADV * neglogpac)
         vf_loss = tf.reduce_mean(mse(tf.squeeze(train_model.vf), R))
         entropy = tf.reduce_mean(cat_entropy(train_model.pi))
-        loss = pg_loss - entropy*ent_coef + vf_loss * vf_coef
+        ############## REMEMBER I REMOVED ENTROPY IN THIS SHIT ###############################################
+        #loss = pg_loss - entropy*ent_coef + vf_loss * vf_coef
+        loss = pg_loss + vf_loss * vf_coef
 
         params = find_trainable_variables("model")
         grads = tf.gradients(loss, params)
@@ -171,7 +173,8 @@ def learn(policy, env, seed, act_f, drop_initial, nsteps=5, nstack=4, total_time
     drop = drop_initial
     for update in range(1, total_timesteps//nbatch+1):
         #print("This is the current dropout: ",1 - drop)
-        if drop < 1.0 and ((update * nsteps) < int(total_timesteps * 0.1)):
+        if drop < 1.0 and ((update * nsteps) < int(total_timesteps * 1.0)):
+            ### REMEMBER YOU HAVE CHANGED THIS SHIT TO EXPLORE THE WHOLE PROCESS
             drop += (nsteps*(1.0 - drop_initial) / total_timesteps)
         #print("this is update", update, " and this is the drop", drop)
         obs, states, rewards, masks, actions, values = runner.run(drop)
