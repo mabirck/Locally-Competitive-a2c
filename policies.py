@@ -5,6 +5,7 @@ from baselines.common.distributions import make_pdtype
 import baselines.common.tf_util as U
 import gym
 from  tfmaxout.maxout import max_out
+from tfmaxout.lwta import lwta
 
 
 class LnLstmPolicy(object):
@@ -65,11 +66,16 @@ class LstmPolicy(object):
         ################################################################
         C = 1
         if act_f == "relu":
+            act_conv = tf.nn.relu
             act_f = tf.nn.relu
         elif act_f =="maxout":
-            act_f = max_out
+            act_conv = max_out
+            act_f = tf.nn.relu
             # Constant which multiplies model by 2 in case of maxout
             C = 2
+        elif act_f == "lwta":
+            act_conv = tf.nn.relu
+            act_f = lwta
         ################################################################
         keep_prob = tf.placeholder(tf.float32)
         ################################################################
@@ -83,19 +89,23 @@ class LstmPolicy(object):
         M = tf.placeholder(tf.float32, [nbatch]) #mask (done t-1)
         S = tf.placeholder(tf.float32, [nenv, nlstm*2]) #states
         with tf.variable_scope("model", reuse=reuse):
-            h = conv(tf.cast(X, tf.float32)/255., 'c1', nf=32*C, rf=8, stride=4,act=act_f, init_scale=np.sqrt(2))
-            h2 = conv(h, 'c2', nf=64*C, rf=4, stride=2, act=act_f, init_scale=np.sqrt(2))
-            h3 = conv(h2, 'c3', nf=64*C, rf=3, stride=1, act=act_f, init_scale=np.sqrt(2))
+            h = conv(tf.cast(X, tf.float32)/255., 'c1', nf=32*C, rf=8, stride=4, act=act_conv, init_scale=np.sqrt(2))
+            h2 = conv(h, 'c2', nf=64*C, rf=4, stride=2, act=act_conv, init_scale=np.sqrt(2))
+            h3 = conv(h2, 'c3', nf=64*C, rf=3, stride=1, act=act_conv, init_scale=np.sqrt(2))
             h3 = conv_to_fc(h3)
-            h4 = fc(h3, 'fc1', nh=512, init_scale=np.sqrt(2))
-            h4_drop = tf.nn.dropout(h4, keep_prob)
+            h4 = fc(h3, 'fc1', nh=512, act = act_f, init_scale=np.sqrt(2))
+            print(h4)
+            #h4_drop = tf.nn.dropout(h4, keep_prob)
+            h4_drop = h4
             xs = batch_to_seq(h4_drop, nenv, nsteps)
             ms = batch_to_seq(M, nenv, nsteps)
             h5, snew = lstm(xs, ms, S, 'lstm1', nh=nlstm)
             h5 = seq_to_batch(h5)
-            h5_drop = tf.nn.dropout(h5, keep_prob)
-            pi = fc(h5_drop, 'pi', nact, act=lambda x:x)
-            vf = fc(h5_drop, 'v', 1, act=lambda x:x)
+            #h5_drop = tf.nn.dropout(h5, keep_prob)
+            #h5_drop = act_f(h5)
+            #print(h5_drop)
+            pi = fc(h5, 'pi', nact, act=lambda x:x)
+            vf = fc(h5, 'v', 1, act=lambda x:x)
             #print(drop)
 
         v0 = vf[:, 0]

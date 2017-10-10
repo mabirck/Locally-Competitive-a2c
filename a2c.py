@@ -42,8 +42,8 @@ class Model(object):
         vf_loss = tf.reduce_mean(mse(tf.squeeze(train_model.vf), R))
         entropy = tf.reduce_mean(cat_entropy(train_model.pi))
         ############## REMEMBER I REMOVED ENTROPY IN THIS SHIT ###############################################
-        #loss = pg_loss - entropy*ent_coef + vf_loss * vf_coef
-        loss = pg_loss + vf_loss * vf_coef
+        loss = pg_loss - entropy*ent_coef + vf_loss * vf_coef
+        #loss = pg_loss + vf_loss * vf_coef
 
         params = find_trainable_variables("model")
         grads = tf.gradients(loss, params)
@@ -173,9 +173,9 @@ def learn(policy, env, seed, act_f, drop_initial, nsteps=5, nstack=4, total_time
     drop = drop_initial
     for update in range(1, total_timesteps//nbatch+1):
         #print("This is the current dropout: ",1 - drop)
-        if drop < 0.9 and ((update * nsteps) < int(total_timesteps * 1.0)):
+        #if drop < 1.0 and ((update * nsteps) < int(total_timesteps * .2)):
             ### REMEMBER YOU HAVE CHANGED THIS SHIT TO EXPLORE THE WHOLE PROCESS
-            drop += (nsteps*(0.9 - drop_initial) / total_timesteps)
+            #drop += (nsteps*(1.0 - drop_initial) / total_timesteps)
         #print("this is update", update, " and this is the drop", drop)
         obs, states, rewards, masks, actions, values = runner.run(drop)
         policy_loss, value_loss, policy_entropy = model.train(obs, states, rewards, masks, actions, values, drop)

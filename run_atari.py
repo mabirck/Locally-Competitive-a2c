@@ -64,13 +64,13 @@ def main():
     ####################################################################################################
     parser.add_argument('--seed', help='RNG seed', type=int, default=0)
     parser.add_argument('--policy', help='Policy architecture', choices=['cnn', 'lstm', 'lnlstm'], default='lstm')
-    parser.add_argument('--act_func', help='Activation Function', choices=['maxout', 'relu'], default='maxout')
+    parser.add_argument('--act_func', help='Activation Function', choices=['maxout', 'relu', 'lwta'], default='lwta')
     parser.add_argument('--lrschedule', help='Learning rate schedule', choices=['constant', 'linear'], default='constant')
     parser.add_argument('--million_frames', help='How many frames to train (/ 1e6). '
         'This number gets divided by 4 due to frameskip', type=int, default=100)
     parser.add_argument('--log_dir', help='Log dir', type=str, default='log')
     parser.add_argument('--exp', help='Exploration Strategies', choices=['ent', 'thompson'], default='ent')
-    parser.add_argument('--dropout', help='Exploration Strategies', type=float, default=0.9)
+    parser.add_argument('--dropout', help='Exploration Strategies', type=float, default=0.1)
 
     args = parser.parse_args()
     train(args, args.env, num_frames=1e6 * args.million_frames, seed=args.seed,
