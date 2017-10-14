@@ -39,7 +39,13 @@ class Model(object):
 
         neglogpac = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=train_model.pi, labels=A)
         pg_loss = tf.reduce_mean(ADV * neglogpac)
-        vf_loss = tf.reduce_mean(mse(tf.squeeze(train_model.vf), R))
+        #vf_loss = tf.reduce_mean(mse(tf.squeeze(train_model.vf), R))
+        ### TAKE CARE A I CHANGED IN here
+        vars   = tf.trainable_variables()
+        lossL2 = tf.add_n([ tf.nn.l2_loss(v) for v in vars
+                    if '/b' not in v.name ]) * 0.005
+
+        vf_loss = tf.reduce_mean(mse(tf.squeeze(train_model.vf), R)) + lossL2
         entropy = tf.reduce_mean(cat_entropy(train_model.pi))
         ############## REMEMBER I REMOVED ENTROPY IN THIS SHIT ###############################################
         loss = pg_loss - entropy*ent_coef + vf_loss * vf_coef
@@ -100,6 +106,7 @@ class Runner(object):
         nenv = env.num_envs
         self.batch_ob_shape = (nenv*nsteps, nh, nw, nc*nstack)
         self.obs = np.zeros((nenv, nh, nw, nc*nstack), dtype=np.uint8)
+        self.nc = nc
         obs = env.reset()
         self.update_obs(obs)
         self.gamma = gamma
@@ -110,8 +117,8 @@ class Runner(object):
     def update_obs(self, obs):
         # Do frame-stacking here instead of the FrameStack wrapper to reduce
         # IPC overhead
-        self.obs = np.roll(self.obs, shift=-1, axis=3)
-        self.obs[:, :, :, -1] = obs[:, :, :, 0]
+        self.obs = np.roll(self.obs, shift=-self.nc, axis=3)
+        self.obs[:, :, :, -self.nc:] = obs
     def run(self, drop):
         mb_obs, mb_rewards, mb_actions, mb_values, mb_dones = [],[],[],[],[]
         mb_states = self.states
