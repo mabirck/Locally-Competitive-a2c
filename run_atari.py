@@ -21,16 +21,16 @@ def train(args, env_id, num_frames, seed, policy, lrschedule, num_cpu):
         def _thunk():
             MT = ""
             if len(env_id) > 1:
-                MT = "{}_{}_{}/".format(env_id[0][:4], env_id[1][:4], args.act_func)
+                MT = "{}_{}_{}/".format(env_id[0][:4], env_id[1][:4], args.act_func+'_'+str(args.seed))
             else:
-                MT = "{}_{}/".format(env_id[0]+DM_STYLE, args.act_func)
+                MT = "{}_{}/".format(env_id[0]+DM_STYLE, args.act_func+'_'+str(args.seed))
 
             ### CREATING MULTIPLE GAMES ENVS ###
             if(rank < num_cpu//2 or len(env_id) == 1): # <<--- CHECKING WHETHER IS MULTITASK
-                PATH = './{}/{}{}/{}'.format(args.log_dir,MT,env_id[0]+DM_STYLE+'_'+str(args.seed), env_id[0]+DM_STYLE)
+                PATH = './{}/{}{}'.format(args.log_dir,MT, env_id[0]+DM_STYLE)
                 env = gym.make(env_id[0]+DM_STYLE)
             else:
-                PATH = './{}/{}{}/{}'.format(args.log_dir,MT,env_id[0]+DM_STYLE+'_'+str(args.seed),env_id[1]+DM_STYLE)
+                PATH = './{}/{}{}'.format(args.log_dir,MT,env_id[1]+DM_STYLE)
                 env = gym.make(env_id[1]+DM_STYLE)
 
             env.seed(seed + rank)

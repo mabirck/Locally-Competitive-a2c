@@ -43,7 +43,7 @@ class Model(object):
         ### TAKE CARE A I CHANGED IN here
         vars   = tf.trainable_variables()
         lossL2 = tf.add_n([ tf.nn.l2_loss(v) for v in vars
-                    if '/b' not in v.name ]) * 0.005
+                    if 'v/w' in v.name ]) * 0.005
 
         vf_loss = tf.reduce_mean(mse(tf.squeeze(train_model.vf), R)) + lossL2
         entropy = tf.reduce_mean(cat_entropy(train_model.pi))
