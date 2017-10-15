@@ -76,6 +76,9 @@ class LstmPolicy(object):
         elif act_f == "lwta":
             act_conv = tf.nn.relu
             act_f = lwta
+        elif act_f == "maxout_lwta":
+            act_conv = max_out
+            act_f = lwta
         ################################################################
         keep_prob = tf.placeholder(tf.float32)
         ################################################################

@@ -41,11 +41,11 @@ class Model(object):
         pg_loss = tf.reduce_mean(ADV * neglogpac)
         #vf_loss = tf.reduce_mean(mse(tf.squeeze(train_model.vf), R))
         ### TAKE CARE A I CHANGED IN here
-        vars   = tf.trainable_variables()
-        lossL2 = tf.add_n([ tf.nn.l2_loss(v) for v in vars
-                    if 'v/w' in v.name ]) * 0.005
+        #vars   = tf.trainable_variables()
+        #lossL2 = tf.add_n([ tf.nn.l2_loss(v) for v in vars
+        #            if 'v/w' in v.name ]) * 0.005
 
-        vf_loss = tf.reduce_mean(mse(tf.squeeze(train_model.vf), R)) + lossL2
+        vf_loss = tf.reduce_mean(mse(tf.squeeze(train_model.vf), R)) #+ lossL2
         entropy = tf.reduce_mean(cat_entropy(train_model.pi))
         ############## REMEMBER I REMOVED ENTROPY IN THIS SHIT ###############################################
         loss = pg_loss - entropy*ent_coef + vf_loss * vf_coef
