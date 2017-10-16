@@ -106,7 +106,7 @@ class LstmPolicy(object):
             h5, snew = lstm(xs, ms, S, 'lstm1', nh=nlstm)
             h5 = seq_to_batch(h5)
             #h5_drop = tf.nn.dropout(h5, keep_prob)
-            h5 = act_f(h5)
+            #h5 = act_f(h5)
             #print(h5_drop)
             pi = fc(h5, 'pi', nact, act=lambda x:x)
             vf = fc(h5, 'v', 1, act=lambda x:x)
