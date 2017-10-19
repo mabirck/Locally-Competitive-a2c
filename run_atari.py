@@ -64,7 +64,7 @@ def main():
     ####################################################################################################
     parser.add_argument('--seed', help='RNG seed', type=int, default=0)
     parser.add_argument('--policy', help='Policy architecture', choices=['cnn', 'lstm', 'lnlstm'], default='lstm')
-    parser.add_argument('--act_func', help='Activation Function', choices=['maxout', 'relu', 'lwta', 'maxout_lwta'], default='lwta')
+    parser.add_argument('--act_func', help='Activation Function', choices=['maxout', 'relu', 'lwta', 'maxout_lwta', 'fully_maxout'], default='lwta')
     parser.add_argument('--lrschedule', help='Learning rate schedule', choices=['constant', 'linear'], default='constant')
     parser.add_argument('--million_frames', help='How many frames to train (/ 1e6). '
         'This number gets divided by 4 due to frameskip', type=int, default=100)
