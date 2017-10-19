@@ -65,6 +65,7 @@ class LstmPolicy(object):
 
         ################################################################
         C = 1
+        F = 1
         if act_f == "relu":
             act_conv = tf.nn.relu
             act_f = tf.nn.relu
@@ -80,6 +81,11 @@ class LstmPolicy(object):
             act_conv = max_out
             act_f = lwta
             C = 2
+        elif act_f == "fully_maxout":
+            act_conv = max_out
+            act_f = max_out
+            C = 2
+            F = 2
         ################################################################
         keep_prob = tf.placeholder(tf.float32)
         ################################################################
@@ -97,7 +103,7 @@ class LstmPolicy(object):
             h2 = conv(h, 'c2', nf=64*C, rf=4, stride=2, act=act_conv, init_scale=np.sqrt(2))
             h3 = conv(h2, 'c3', nf=64*C, rf=3, stride=1, act=act_conv, init_scale=np.sqrt(2))
             h3 = conv_to_fc(h3)
-            h4 = fc(h3, 'fc1', nh=512, act = act_f, init_scale=np.sqrt(2))
+            h4 = fc(h3, 'fc1', nh=512*F, act = act_f, init_scale=np.sqrt(2))
             print(h4)
             #h4_drop = tf.nn.dropout(h4, keep_prob)
             h4_drop = h4
