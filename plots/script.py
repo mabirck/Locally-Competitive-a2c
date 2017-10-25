@@ -9,7 +9,7 @@ ewma = pandas.stats.moments.ewma
 def compatibleMatrix(data):
 
     minor = [len(d) for d in data]
-    #print minor
+    #print data
     minor = min(minor)
     #print "This is the min", minor
     reshaped_data = np.array([d[:minor] for d in data])
@@ -17,7 +17,7 @@ def compatibleMatrix(data):
 def workersMeanReward(path, game):
     total_rewards = list()
     files = glob.glob(path+'*/'+game+'/*')
-
+    #print "OOHH SHIT THIS IS HERE", files
     for f in files:
         print f
         #print f
@@ -47,29 +47,29 @@ def workersLength(path, game):
     return total_rewards
 
 def fix_name(paths):
-    return [name.split('/')[-2] for name in paths]
+    return [(name.split('/')[-2]) for name in paths]
 
 def getMin(data):
     mini = [x[-1] for x in data]
-    print mini
+    #print mini
     return min(mini)
 
-def plotData(data, length, paths):
+def plotData(data, length, paths, lines, colors):
     mini = getMin(length)
-    print paths
-    name = paths[0].split('/')[-1]
+    #print paths
+    name = paths[0].split('/')[-4]+'_from_'+paths[0].split('/')[-3]
     paths = fix_name(paths)
     fig = plt.figure()
 
-    for d, l in zip(data, length):
-        plt.plot(l ,ewma(d, 50))
+    for k, (d, l) in enumerate(zip(data, length)):
+        plt.plot(l ,ewma(d, 20), linestyle=lines[k], color=colors[k])
 
     plt.legend(paths, loc='best')
     plt.xlabel('Steps')
     plt.ylabel('Reward')
     plt.grid()
     plt.xlim(0.0,mini)
-    print name
+    #print name,"NAMEEEE MOTHE FUCKER"
     fig.savefig(name+'.pdf')
     plt.show()
 
@@ -97,17 +97,42 @@ def main():
     parser.add_argument('--env', help='environments ID to plot', type=str, default='NoFrameskip-v4')
     args = parser.parse_args()
 
-    paths = glob.glob("../log/{}/*/".format(args.log_dir))
-    #print paths
-    data = list()
-    length = list()
 
-    for game in paths:
-        #print(game)
-        data.append(workersMeanReward(game, args.log_dir+args.env))
-        length.append(workersLength(game, args.log_dir+args.env))
-    #print length
-    plotData(data, length, paths)
+    # MAXOUT
+    #all_games =  ["Asterix", "Asterix", "BeamRider", "BeamRider", \
+    #             "DemonAttack", "DemonAttack", "Enduro", "Enduro", \
+    #             "Pong", "Pong", "SpaceInvaders", "SpaceInvaders"
+    #]
+    #all_paths = ["Asterix/aste_beam_maxout", "Asterix/aste_endu_maxout", "BeamRider/aste_beam_maxout", "BeamRider/beam_endu_maxout", \
+    #             "DemonAttack/demo_pong_maxout", "DemonAttack/demo_space_maxout", "Enduro/aste_endu_maxout", "Enduro/beam_endu_maxout", \
+    #             "Pong/demo_pong_maxout", "Pong/space_pong_maxout", "SpaceInvaders/demo_space_maxout", "SpaceInvaders/space_pong_maxout"
+    #]
+
+    # LWTA
+    #all_games =  ["DemonAttack", "DemonAttack", "Pong", "Pong", "SpaceInvaders", "SpaceInvaders"]
+    #all_paths = [ "DemonAttack/demo_pong_lwta", "DemonAttack/demo_space_lwta",
+    #             "Pong/demo_pong_lwta", "Pong/space_pong_lwta", "SpaceInvaders/demo_space_lwta", "SpaceInvaders/space_pong_lwta"
+    #]
+
+    # MIXED
+    all_games =  ["DemonAttack", "DemonAttack", "Pong", "Pong", "SpaceInvaders", "SpaceInvaders"]
+    all_paths = [ "DemonAttack/demo_pong_mix", "DemonAttack/demo_space_mix", "Pong/demo_pong_mix", \
+                  "Pong/space_pong_mix", "SpaceInvaders/demo_space_mix", "SpaceInvaders/space_pong_mix"]
+    colors = ["black", "gray", "blue", "red"]
+    lines = [':', '-.', '--', '-']
+    for current, game2plot in zip(all_paths, all_games):
+        paths = glob.glob("../log/{}/*/".format(current))
+        #print paths
+        data = list()
+        length = list()
+        log_dir = args.log_dir.split('/')[0]
+        for game in paths:
+            #print("SHIIIIT", game)
+            data.append(workersMeanReward(game, game2plot+args.env))
+            #print "This is the data", data
+            length.append(workersLength(game, game2plot+args.env))
+        #print length
+        plotData(data, length, paths, lines, colors)
 
 if __name__ == '__main__':
     main()
