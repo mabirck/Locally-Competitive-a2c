@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas
 from matplotlib.backends.backend_pdf import PdfPages
-
+import difflib
 ewma = pandas.stats.moments.ewma
 
 def compatibleMatrix(data):
@@ -53,25 +53,35 @@ def getMin(data):
     mini = [x[-1] for x in data]
     #print mini
     return min(mini)
+def getPair(joint):
+    l = ["Asterix/aste_beam", "Asterix/aste_endu", "BeamRider/aste_beam", "BeamRider/beam_endu", \
+                 "DemonAttack/demo_pong", "DemonAttack/demo_space", "Enduro/aste_endu", "Enduro/beam_endu", \
+                 "Pong/demo_pong", "Pong/space_pong", "SpaceInvaders/demo_space", "SpaceInvaders/space_pong"]
+    diff = difflib.get_close_matches(joint, l, n=4)
+    x = (diff.split('/'))[0]
+    print x
+    return x
 
-def plotData(data, length, paths, lines, colors):
+
+def plotData(data, length, paths, lines, colors, axis, from_where):
     mini = getMin(length)
-    #print paths
-    name = paths[0].split('/')[-4]+'_from_'+paths[0].split('/')[-3]
-    paths = fix_name(paths)
-    fig = plt.figure()
+    print paths[1].split('/')[-3]
+
+    name = paths[0].split('/')[-4]
+
+    ax = plt.subplot(3, 2, axis)
+    ax.set_title(name+' with '+from_where, fontsize=10, style='italic')
 
     for k, (d, l) in enumerate(zip(data, length)):
-        plt.plot(l ,ewma(d, 20), linestyle=lines[k], color=colors[k])
+        plt.plot(l ,d)
 
-    plt.legend(paths, loc='best')
-    plt.xlabel('Steps')
-    plt.ylabel('Reward')
+    #plt.legend(paths, loc='best')
+    #plt.xlabel('Steps')
+    #plt.ylabel('Reward')
     plt.grid()
     plt.xlim(0.0,mini)
     #print name,"NAMEEEE MOTHE FUCKER"
-    fig.savefig(name+'.pdf')
-    plt.show()
+
 
 
 
@@ -109,30 +119,42 @@ def main():
     #]
 
     # LWTA
-    #all_games =  ["DemonAttack", "DemonAttack", "Pong", "Pong", "SpaceInvaders", "SpaceInvaders"]
-    #all_paths = [ "DemonAttack/demo_pong_lwta", "DemonAttack/demo_space_lwta",
-    #             "Pong/demo_pong_lwta", "Pong/space_pong_lwta", "SpaceInvaders/demo_space_lwta", "SpaceInvaders/space_pong_lwta"
-    #]
+    all_games =  ["DemonAttack", "DemonAttack", "Pong", "Pong", "SpaceInvaders", "SpaceInvaders"]
+    joint_games =  ["Pong", "SpaceInvaders", "DemonAttack", "SpaceInvaders", "DemonAttack", "Pong"]
+
+    all_paths = [ "DemonAttack/demo_pong_lwta", "DemonAttack/demo_space_lwta",
+                 "Pong/demo_pong_lwta", "Pong/space_pong_lwta", "SpaceInvaders/demo_space_lwta", "SpaceInvaders/space_pong_lwta"
+    ]
+    labels = ['A3C', 'A3C_Multi-Task', 'A3C_Maxout']
 
     # MIXED
-    all_games =  ["DemonAttack", "DemonAttack", "Pong", "Pong", "SpaceInvaders", "SpaceInvaders"]
-    all_paths = [ "DemonAttack/demo_pong_mix", "DemonAttack/demo_space_mix", "Pong/demo_pong_mix", \
-                  "Pong/space_pong_mix", "SpaceInvaders/demo_space_mix", "SpaceInvaders/space_pong_mix"]
+    #all_games =  ["DemonAttack", "DemonAttack", "Pong", "Pong", "SpaceInvaders", "SpaceInvaders"]
+    #all_paths = [ "DemonAttack/demo_pong_mix", "DemonAttack/demo_space_mix", "Pong/demo_pong_mix", \
+    #              "Pong/space_pong_mix", "SpaceInvaders/demo_space_mix", "SpaceInvaders/space_pong_mix"]
     colors = ["black", "gray", "blue", "red"]
     lines = [':', '-.', '--', '-']
-    for current, game2plot in zip(all_paths, all_games):
+    fig = plt.figure()
+    for axis, (current, game2plot) in enumerate(zip(all_paths, all_games)):
         paths = glob.glob("../log/{}/*/".format(current))
         #print paths
         data = list()
         length = list()
         log_dir = args.log_dir.split('/')[0]
+
+
         for game in paths:
             #print("SHIIIIT", game)
-            data.append(workersMeanReward(game, game2plot+args.env))
+            data.append(ewma(workersMeanReward(game, game2plot+args.env), 20))
             #print "This is the data", data
             length.append(workersLength(game, game2plot+args.env))
-        #print length
-        plotData(data, length, paths, lines, colors)
+            #print length
+        plotData(data, length, paths, lines, colors, axis+1, joint_games[axis])
 
+    plt.legend(labels, loc='upper center', bbox_to_anchor=(-0.2, -0.7),  shadow=True, ncol=3)
+
+    plt.tight_layout()
+    #fig.legend(labels)
+    fig.savefig("all"+'.pdf')
+    plt.show()
 if __name__ == '__main__':
     main()

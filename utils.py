@@ -5,9 +5,20 @@ import tensorflow as tf
 from gym import spaces
 from collections import deque
 
-def sample(logits):
+def sample(logits, actionMasks):
+    mask = tf.sequence_mask(actionMasks, 18)
+    zeros = tf.zeros_like(logits)
     noise = tf.random_uniform(tf.shape(logits))
-    return tf.argmax(logits - tf.log(-tf.log(noise)), 1)
+
+    #print("THESE ARE MY GUYS, ", logits, mask, zeros)
+    noise = tf.where(mask, noise, zeros)
+    values  = tf.where(mask, logits, zeros)
+    #print("I DO NEED IT TO BE OTHER THING", values)
+    #a = tf.multiply(logits, values)
+
+
+    a = tf.argmax(values - tf.log(-tf.log(noise)), 1)
+    return a
 
 def cat_entropy(logits):
     a0 = logits - tf.reduce_max(logits, 1, keep_dims=True)

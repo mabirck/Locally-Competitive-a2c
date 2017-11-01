@@ -61,7 +61,7 @@ class LnLstmPolicy(object):
         self.value = value
 
 class LstmPolicy(object):
-    def __init__(self, sess, act_f, ob_space, ac_space, nenv, nsteps, nstack, nlstm=256, reuse=False):
+    def __init__(self, sess, act_f, ob_space, ac_space, actionMasks, nenv, nsteps, nstack, nlstm=256, reuse=False):
 
         ################################################################
         C = 1
@@ -94,7 +94,9 @@ class LstmPolicy(object):
         nbatch = nenv*nsteps
         nh, nw, nc = ob_space.shape
         ob_shape = (nbatch, nh, nw, nc*nstack)
-        nact = ac_space.n
+        # USING 18 WHICH IS THE MAX
+        #nact = ac_space.n
+        nact = 18
         X = tf.placeholder(tf.uint8, ob_shape) #obs
         M = tf.placeholder(tf.float32, [nbatch]) #mask (done t-1)
         S = tf.placeholder(tf.float32, [nenv, nlstm*2]) #states
@@ -104,7 +106,7 @@ class LstmPolicy(object):
             h3 = conv(h2, 'c3', nf=64*C, rf=3, stride=1, act=act_conv, init_scale=np.sqrt(2))
             h3 = conv_to_fc(h3)
             h4 = fc(h3, 'fc1', nh=512*F, act = act_f, init_scale=np.sqrt(2))
-            print(h4)
+            #print(h4)
             #h4_drop = tf.nn.dropout(h4, keep_prob)
             h4_drop = h4
             xs = batch_to_seq(h4_drop, nenv, nsteps)
@@ -119,7 +121,7 @@ class LstmPolicy(object):
             #print(drop)
 
         v0 = vf[:, 0]
-        a0 = sample(pi)
+        a0 = sample(pi, actionMasks)
         self.initial_state = np.zeros((nenv, nlstm*2), dtype=np.float32)
 
         def step(ob, state, mask, drop):

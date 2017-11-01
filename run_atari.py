@@ -7,31 +7,38 @@ from a2c import learn
 from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
 from baselines.common.atari_wrappers import wrap_deepmind
 from policies import CnnPolicy, LstmPolicy, LnLstmPolicy
-
+import tensorflow as tf
 
 
 
 def train(args, env_id, num_frames, seed, policy, lrschedule, num_cpu):
     num_timesteps = int(num_frames / 4 * 1.1)
     if len(env_id) > 1:
-        num_timesteps = int(num_timesteps * 2)
+        num_timesteps = int(num_timesteps * len(env_id))
     DM_STYLE = "NoFrameskip-v4"
     # divide by 4 due to frameskip, then do a little extras so episodes end
     def make_env(rank):
         def _thunk():
+            #########################################################
+            ########### HARDCODED TO BE 8 CPUS #####################
+            #######################################################
+            index = rank//8
             MT = ""
             if len(env_id) > 1:
-                MT = "{}_{}_{}/".format(env_id[0][:4], env_id[1][:4], args.act_func+'_'+str(args.seed))
+                short_names = [e[:4] for e in env_id]
+                short = "_".join(short_names)
+                MT = "{}_{}/".format(short, args.act_func+'_'+str(args.seed))
             else:
-                MT = "{}_{}/".format(env_id[0]+DM_STYLE, args.act_func+'_'+str(args.seed))
+                MT = "{}_{}/".format(env_id[index]+DM_STYLE, args.act_func+'_'+str(args.seed))
 
             ### CREATING MULTIPLE GAMES ENVS ###
-            if(rank < num_cpu//2 or len(env_id) == 1): # <<--- CHECKING WHETHER IS MULTITASK
-                PATH = './{}/{}{}'.format(args.log_dir,MT, env_id[0]+DM_STYLE)
-                env = gym.make(env_id[0]+DM_STYLE)
+            if(len(env_id) == 1): # <<--- CHECKING WHETHER IS MULTITASK
+                PATH = './{}/{}{}'.format(args.log_dir,MT, env_id[index]+DM_STYLE)
+                env = gym.make(env_id[index]+DM_STYLE)
             else:
-                PATH = './{}/{}{}'.format(args.log_dir,MT,env_id[1]+DM_STYLE)
-                env = gym.make(env_id[1]+DM_STYLE)
+                #print(index)
+                PATH = './{}/{}{}'.format(args.log_dir,MT,env_id[index]+DM_STYLE)
+                env = gym.make(env_id[index]+DM_STYLE)
 
             env.seed(seed + rank)
             if not(os.path.exists(PATH)):
@@ -42,10 +49,17 @@ def train(args, env_id, num_frames, seed, policy, lrschedule, num_cpu):
             return wrap_deepmind(env)
         return _thunk
 
-    if len(env_id)   > 1:
-        num_cpu*=2
+    if len(env_id) > 1:
+        num_cpu*=len(env_id)
     set_global_seeds(seed)
+
     env = SubprocVecEnv([make_env(i) for i in range(num_cpu)])
+    actionMasks = []
+    for e in range(num_cpu):
+        #print(e, num_cpu)
+        env.remotes[e].send(('get_spaces', None))
+        actionMasks.append(env.remotes[e].recv()[0].n)
+    #print(actionMasks)
 
     if policy == 'cnn':
         policy_fn = CnnPolicy
@@ -53,7 +67,7 @@ def train(args, env_id, num_frames, seed, policy, lrschedule, num_cpu):
         policy_fn = LstmPolicy
     elif policy == 'lnlstm':
         policy_fn = LnLstmPolicy
-    learn(policy_fn, env, seed, args.act_func, args.dropout, total_timesteps=num_timesteps, lrschedule=lrschedule)
+    learn(policy_fn, env, actionMasks, seed, args.act_func, args.dropout, total_timesteps=num_timesteps, lrschedule=lrschedule)
     env.close()
 
 def main():
