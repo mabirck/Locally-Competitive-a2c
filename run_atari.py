@@ -27,9 +27,9 @@ def train(args, env_id, num_frames, seed, policy, lrschedule, num_cpu):
             if len(env_id) > 1:
                 short_names = [e[:4] for e in env_id]
                 short = "_".join(short_names)
-                MT = "{}_{}/".format(short, args.act_func+'_'+str(args.seed))
+                MT = "{}_{}/".format(short+'_'+args.head, args.act_func+'_'+str(args.seed))
             else:
-                MT = "{}_{}/".format(env_id[index]+DM_STYLE, args.act_func+'_'+str(args.seed))
+                MT = "{}_{}/".format(env_id[index]+DM_STYLE+'_'+args.head, args.act_func+'_'+str(args.seed))
 
             ### CREATING MULTIPLE GAMES ENVS ###
             if(len(env_id) == 1): # <<--- CHECKING WHETHER IS MULTITASK
@@ -55,11 +55,20 @@ def train(args, env_id, num_frames, seed, policy, lrschedule, num_cpu):
 
     env = SubprocVecEnv([make_env(i) for i in range(num_cpu)])
     actionMasks = []
+    heads=list()
+    #NECESSARY PROCEDURE TO GET ACTION MASKS
     for e in range(num_cpu):
         #print(e, num_cpu)
         env.remotes[e].send(('get_spaces', None))
         actionMasks.append(env.remotes[e].recv()[0].n)
-    #print(actionMasks)
+        heads.append(e // 8)
+        #print(e//8)
+    heads = set(heads)
+    heads = list(heads)
+
+
+    print(actionMasks)
+    print(heads)
 
     if policy == 'cnn':
         policy_fn = CnnPolicy
@@ -67,7 +76,8 @@ def train(args, env_id, num_frames, seed, policy, lrschedule, num_cpu):
         policy_fn = LstmPolicy
     elif policy == 'lnlstm':
         policy_fn = LnLstmPolicy
-    learn(policy_fn, env, actionMasks, seed, args.act_func, args.dropout, total_timesteps=num_timesteps, lrschedule=lrschedule)
+
+    learn(policy_fn, env, actionMasks, heads, seed, args.act_func, args.dropout, args.head, total_timesteps=num_timesteps, lrschedule=lrschedule)
     env.close()
 
 def main():
@@ -77,8 +87,9 @@ def main():
     parser.add_argument('--env', help='environments ID', nargs='*', default=['Breakout'])##
     ####################################################################################################
     parser.add_argument('--seed', help='RNG seed', type=int, default=0)
+    parser.add_argument('--head', help='OUTPUT STYLE', choices=['multi', 'single'], default='single')
     parser.add_argument('--policy', help='Policy architecture', choices=['cnn', 'lstm', 'lnlstm'], default='lstm')
-    parser.add_argument('--act_func', help='Activation Function', choices=['maxout', 'relu', 'lwta', 'maxout_lwta', 'fully_maxout'], default='lwta')
+    parser.add_argument('--act_func', help='Activation Function', choices=['maxout', 'relu', 'lwta', 'maxout_lwta', 'fully_maxout'], default='relu')
     parser.add_argument('--lrschedule', help='Learning rate schedule', choices=['constant', 'linear'], default='constant')
     parser.add_argument('--million_frames', help='How many frames to train (/ 1e6). '
         'This number gets divided by 4 due to frameskip', type=int, default=100)

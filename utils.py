@@ -6,7 +6,10 @@ from gym import spaces
 from collections import deque
 
 def sample(logits, actionMasks):
-    mask = tf.sequence_mask(actionMasks, 18)
+    #print("MY BEAUTY LOGITS AND WHERE I HAVE TO CHANGE")
+    #print(logits)
+    #print(actionMasks)
+    mask = tf.sequence_mask(actionMasks, maxlen=18)
     zeros = tf.zeros_like(logits)
     noise = tf.random_uniform(tf.shape(logits))
 
@@ -16,8 +19,9 @@ def sample(logits, actionMasks):
     #print("I DO NEED IT TO BE OTHER THING", values)
     #a = tf.multiply(logits, values)
 
-
+    
     a = tf.argmax(values - tf.log(-tf.log(noise)), 1)
+    print(a)
     return a
 
 def cat_entropy(logits):

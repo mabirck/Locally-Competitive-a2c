@@ -61,7 +61,7 @@ class LnLstmPolicy(object):
         self.value = value
 
 class LstmPolicy(object):
-    def __init__(self, sess, act_f, ob_space, ac_space, actionMasks, nenv, nsteps, nstack, nlstm=256, reuse=False):
+    def __init__(self, sess, act_f, ob_space, ac_space, actionMasks, heads, multi_contr, nenv, nsteps, nstack, nlstm=256, reuse=False):
 
         ################################################################
         C = 1
@@ -106,22 +106,55 @@ class LstmPolicy(object):
             h3 = conv(h2, 'c3', nf=64*C, rf=3, stride=1, act=act_conv, init_scale=np.sqrt(2))
             h3 = conv_to_fc(h3)
             h4 = fc(h3, 'fc1', nh=512*F, act = act_f, init_scale=np.sqrt(2))
+
             #print(h4)
             #h4_drop = tf.nn.dropout(h4, keep_prob)
+
             h4_drop = h4
             xs = batch_to_seq(h4_drop, nenv, nsteps)
             ms = batch_to_seq(M, nenv, nsteps)
             h5, snew = lstm(xs, ms, S, 'lstm1', nh=nlstm)
             h5 = seq_to_batch(h5)
+
             #h5_drop = tf.nn.dropout(h5, keep_prob)
             #h5 = act_f(h5)
             #print(h5_drop)
-            pi = fc(h5, 'pi', nact, act=lambda x:x)
-            vf = fc(h5, 'v', 1, act=lambda x:x)
-            #print(drop)
 
-        v0 = vf[:, 0]
-        a0 = sample(pi, actionMasks)
+            if multi_contr == "single":
+                print("LETS BUILD A SINGLE HEAD MODEL...")
+                pi = fc(h5, 'pi', nact, act=lambda x:x)
+                vf = fc(h5, 'v', 1, act=lambda x:x)
+            elif multi_contr == "multi":
+                print("LETS BUILD A MULTI HEAD MODEL...")
+                pi = fc(h5, 'pi', nenv//8 * nact, act=lambda x:x)
+                pi = tf.reshape(pi, (nenv*nsteps, nenv//8, 18), 'pi_rs')
+
+                vf = fc(h5, 'v', nenv//8 * 1, act=lambda x:x)
+                vf = tf.reshape(vf, [nenv*nsteps, nenv//8, 1], 'vf_rs')
+
+                ## PREPARING INDEX THINGS ################################
+                index = [[index]*8*nsteps for index in heads]
+                index = [item for sublist in index for item in sublist]
+                index = [ [k, i] for k, i in enumerate(index)]
+                ######################################################
+
+                pi = tf.gather_nd(pi, index, name='pi_gather')
+                vf = tf.gather_nd(vf, index, name='vf_gather')
+
+            print("FINAL PI and FINAL", pi, vf)
+
+
+        print("This is my pi", pi)
+        print("This is my vf", vf)
+
+
+
+
+        mask = [[item]*nsteps for item in actionMasks]
+        mask = [item for sublist in mask for item in sublist]
+
+        v0 = vf[:,0]
+        a0 = sample(pi, mask)
         self.initial_state = np.zeros((nenv, nlstm*2), dtype=np.float32)
 
         def step(ob, state, mask, drop):

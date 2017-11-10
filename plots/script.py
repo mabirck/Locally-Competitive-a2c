@@ -19,7 +19,7 @@ def workersMeanReward(path, game):
     files = glob.glob(path+'*/'+game+'/*')
     #print "OOHH SHIT THIS IS HERE", files
     for f in files:
-        print f
+        print(f)
         #print f
         total_rewards.append(getData(f, 'r'))
 
@@ -59,17 +59,17 @@ def getPair(joint):
                  "Pong/demo_pong", "Pong/space_pong", "SpaceInvaders/demo_space", "SpaceInvaders/space_pong"]
     diff = difflib.get_close_matches(joint, l, n=4)
     x = (diff.split('/'))[0]
-    print x
+    print(x)
     return x
 
 
-def plotData(data, length, paths, lines, colors, axis, from_where):
+def plotData(data, length, paths, lines, colors, axis, from_where, L, C):
     mini = getMin(length)
-    print paths[1].split('/')[-3]
+    print(paths[1].split('/')[-3])
 
     name = paths[0].split('/')[-4]
 
-    ax = plt.subplot(3, 2, axis)
+    ax = plt.subplot(L, C, axis)
     ax.set_title(name+' with '+from_where, fontsize=10, style='italic')
 
     for k, (d, l) in enumerate(zip(data, length)):
@@ -93,7 +93,7 @@ def getData(path, key):
         rewards = list()
         for line in f:
             D = ast.literal_eval(line)
-            if D.has_key(key):
+            if key in D:
                 total+=D['l']
                 rewards.append(D[key])
                 #print type(D['r'])
@@ -119,18 +119,45 @@ def main():
     #]
 
     # LWTA
-    all_games =  ["DemonAttack", "DemonAttack", "Pong", "Pong", "SpaceInvaders", "SpaceInvaders"]
-    joint_games =  ["Pong", "SpaceInvaders", "DemonAttack", "SpaceInvaders", "DemonAttack", "Pong"]
+    #all_games =  ["DemonAttack", "DemonAttack", "Pong", "Pong", "SpaceInvaders", "SpaceInvaders"]
+    #joint_games =  ["Pong", "SpaceInvaders", "DemonAttack", "SpaceInvaders", "DemonAttack", "Pong"]
 
-    all_paths = [ "DemonAttack/demo_pong_lwta", "DemonAttack/demo_space_lwta",
-                 "Pong/demo_pong_lwta", "Pong/space_pong_lwta", "SpaceInvaders/demo_space_lwta", "SpaceInvaders/space_pong_lwta"
-    ]
-    labels = ['A3C', 'A3C_Multi-Task', 'A3C_Maxout']
+    #all_paths = [ "DemonAttack/demo_pong_lwta", "DemonAttack/demo_space_lwta",
+    #             "Pong/demo_pong_lwta", "Pong/space_pong_lwta", "SpaceInvaders/demo_space_lwta", "SpaceInvaders/space_pong_lwta"
+    #]
+    #labels = ['A3C', 'A3C_Multi-Task', 'A3C_Maxout']
 
     # MIXED
     #all_games =  ["DemonAttack", "DemonAttack", "Pong", "Pong", "SpaceInvaders", "SpaceInvaders"]
     #all_paths = [ "DemonAttack/demo_pong_mix", "DemonAttack/demo_space_mix", "Pong/demo_pong_mix", \
     #              "Pong/space_pong_mix", "SpaceInvaders/demo_space_mix", "SpaceInvaders/space_pong_mix"]
+
+
+    # THREE GAMES FROM DEEP MIND
+    #all_games =  ["Freeway"]
+    #joint_games =  ["Pong/Qbert"]
+
+    #all_paths = [ "Freeway/free_pong_qber_all"]
+    #labels = ['A3C_Multi-Task_Maxout', 'A3C_Multi-Task_LWTA', 'A3C_Multi-Task_Relu']
+    #L = C = 1
+
+    # THREE GAMES FROM DEEP MIND
+    #all_games =  ["Qbert"]
+    #joint_games =  ["Freeway/Pong"]
+
+    #all_paths = [ "Qbert/free_pong_qber_all"]
+    #labels = ['A3C_MT_Maxout', 'A3C_MT_LWTA', 'A3C_MT_Relu']
+    #L = C = 1
+
+    # THREE GAMES FROM DEEP MIND
+    all_games =  ["Pong"]
+    joint_games =  ["Freeway/Qbert"]
+
+    all_paths = [ "Pong/free_pong_qber_all"]
+    labels = ['A3C_Multi-Task_Maxout', 'A3C_Multi-Task_LWTA', 'A3C_Multi-Task_Relu']
+    L = C = 1
+
+
     colors = ["black", "gray", "blue", "red"]
     lines = [':', '-.', '--', '-']
     fig = plt.figure()
@@ -148,9 +175,10 @@ def main():
             #print "This is the data", data
             length.append(workersLength(game, game2plot+args.env))
             #print length
-        plotData(data, length, paths, lines, colors, axis+1, joint_games[axis])
+        plotData(data, length, paths, lines, colors, axis+1, joint_games[axis], L, C)
 
-    plt.legend(labels, loc='upper center', bbox_to_anchor=(-0.2, -0.7),  shadow=True, ncol=3)
+    #plt.legend(labels, loc='upper center', bbox_to_anchor=(-0.2, -0.7),  shadow=True, ncol=3)
+    plt.legend(labels, loc='best',  shadow=True, ncol=3)
 
     plt.tight_layout()
     #fig.legend(labels)
