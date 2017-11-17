@@ -45,6 +45,8 @@ class Model(object):
         step_model = policy(sess, act_f, ob_space, ac_space, actionMasks, heads, multi_contr, nenvs, 1, nstack, reuse=False)
         train_model = policy(sess, act_f, ob_space, ac_space, actionMasks, heads, multi_contr, nenvs, nsteps, nstack, reuse=True)
         ##
+
+
         neglogpac = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=train_model.pi, labels=A)
         pg_loss = tf.reduce_mean(ADV * neglogpac)
         #vf_loss = tf.reduce_mean(mse(tf.squeeze(train_model.vf), R))
@@ -56,7 +58,7 @@ class Model(object):
         vf_loss = tf.reduce_mean(mse(tf.squeeze(train_model.vf), R)) #+ lossL2
         entropy = tf.reduce_mean(cat_entropy(train_model.pi))
         ############## REMEMBER I REMOVED ENTROPY IN THIS SHIT ###############################################
-        loss = pg_loss - entropy*ent_coef + vf_loss * vf_coef
+        loss = pg_loss - entropy * ent_coef + vf_loss * vf_coef
         #loss = pg_loss + vf_loss * vf_coef
 
         params = find_trainable_variables("model")

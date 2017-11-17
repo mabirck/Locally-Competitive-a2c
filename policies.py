@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from utils import conv, fc, conv_to_fc, batch_to_seq, seq_to_batch, lstm, lnlstm, sample, check_shape
+from utils import conv, fc, conv_to_fc, batch_to_seq, seq_to_batch, lstm, lnlstm, sample, check_shape, multi_lstm
 from baselines.common.distributions import make_pdtype
 import baselines.common.tf_util as U
 import gym
@@ -63,6 +63,13 @@ class LnLstmPolicy(object):
 class LstmPolicy(object):
     def __init__(self, sess, act_f, ob_space, ac_space, actionMasks, heads, multi_contr, nenv, nsteps, nstack, nlstm=256, reuse=False):
 
+        ## PREPARING INDEX THINGS #########################################
+        lstm_heads = [[index]*8 for index in heads]
+        lstm_heads = [item for sublist in lstm_heads for item in sublist]
+
+        index = [[index]*8*nsteps for index in heads]
+        index = [item for sublist in index for item in sublist]
+        index = [ [k, i] for k, i in enumerate(index)]
         ################################################################
         C = 1
         F = 1
@@ -98,45 +105,45 @@ class LstmPolicy(object):
         #nact = ac_space.n
         nact = 18
         X = tf.placeholder(tf.uint8, ob_shape) #obs
+        #print(nenv//8, "SHIIIIT")
         M = tf.placeholder(tf.float32, [nbatch]) #mask (done t-1)
-        S = tf.placeholder(tf.float32, [nenv, nlstm*2]) #states
+        if(multi_contr == "multi"):
+            S = tf.placeholder(tf.float32, [nenv, nlstm*2 * nenv//8]) #states
+        else:
+            S = tf.placeholder(tf.float32, [nenv, nlstm*2]) #states
+
         with tf.variable_scope("model", reuse=reuse):
             h = conv(tf.cast(X, tf.float32)/255., 'c1', nf=32*C, rf=8, stride=4, act=act_conv, init_scale=np.sqrt(2))
             h2 = conv(h, 'c2', nf=64*C, rf=4, stride=2, act=act_conv, init_scale=np.sqrt(2))
             h3 = conv(h2, 'c3', nf=64*C, rf=3, stride=1, act=act_conv, init_scale=np.sqrt(2))
             h3 = conv_to_fc(h3)
             h4 = fc(h3, 'fc1', nh=512*F, act = act_f, init_scale=np.sqrt(2))
-
-            #print(h4)
-            #h4_drop = tf.nn.dropout(h4, keep_prob)
-
-            h4_drop = h4
-            xs = batch_to_seq(h4_drop, nenv, nsteps)
+            xs = batch_to_seq(h4, nenv, nsteps)
             ms = batch_to_seq(M, nenv, nsteps)
-            h5, snew = lstm(xs, ms, S, 'lstm1', nh=nlstm)
-            h5 = seq_to_batch(h5)
-
-            #h5_drop = tf.nn.dropout(h5, keep_prob)
-            #h5 = act_f(h5)
-            #print(h5_drop)
 
             if multi_contr == "single":
                 print("LETS BUILD A SINGLE HEAD MODEL...")
+                #### TAKE CARE SINGLE LSTM ####################
+                h5, snew = lstm(xs, ms, S, 'lstm1', nh=nlstm)
+                h5 = seq_to_batch(h5)
+                #############################################
                 pi = fc(h5, 'pi', nact, act=lambda x:x)
                 vf = fc(h5, 'v', 1, act=lambda x:x)
             elif multi_contr == "multi":
                 print("LETS BUILD A MULTI HEAD MODEL...")
+
+                #### TAKE CARE MUITPLE LSTM (TREATING DIFFERENTE CONTEXT VECTORS AND HIDDEN)
+                h5, snew = multi_lstm(xs, ms, S, 'lstm1', nh=nlstm, nenvs = nenv//8, index=lstm_heads, nsteps=nsteps)
+
+                h5 = seq_to_batch(h5)
+
                 pi = fc(h5, 'pi', nenv//8 * nact, act=lambda x:x)
                 pi = tf.reshape(pi, (nenv*nsteps, nenv//8, 18), 'pi_rs')
 
                 vf = fc(h5, 'v', nenv//8 * 1, act=lambda x:x)
                 vf = tf.reshape(vf, [nenv*nsteps, nenv//8, 1], 'vf_rs')
 
-                ## PREPARING INDEX THINGS ################################
-                index = [[index]*8*nsteps for index in heads]
-                index = [item for sublist in index for item in sublist]
-                index = [ [k, i] for k, i in enumerate(index)]
-                ######################################################
+
 
                 pi = tf.gather_nd(pi, index, name='pi_gather')
                 vf = tf.gather_nd(vf, index, name='vf_gather')
@@ -155,7 +162,7 @@ class LstmPolicy(object):
 
         v0 = vf[:,0]
         a0 = sample(pi, mask)
-        self.initial_state = np.zeros((nenv, nlstm*2), dtype=np.float32)
+        self.initial_state = np.zeros((nenv, nlstm*2*nenv//8), dtype=np.float32)
 
         def step(ob, state, mask, drop):
             a, v, s = sess.run([a0, v0, snew], {X:ob, S:state, M:mask, keep_prob:drop})
@@ -172,6 +179,7 @@ class LstmPolicy(object):
         self.step = step
         self.value = value
         self.keep_prob = keep_prob
+        self.nenv = nenv//8
 
 class CnnPolicy(object):
 

@@ -19,7 +19,7 @@ def sample(logits, actionMasks):
     #print("I DO NEED IT TO BE OTHER THING", values)
     #a = tf.multiply(logits, values)
 
-    
+
     a = tf.argmax(values - tf.log(-tf.log(noise)), 1)
     print(a)
     return a
@@ -102,12 +102,47 @@ def lstm(xs, ms, s, scope, nh, init_scale=1.0):
     for idx, (x, m) in enumerate(zip(xs, ms)):
         c = c*(1-m)
         h = h*(1-m)
+        print("THESE ARE THE GUYS GIVING ME HEADACHE", c, h)
         z = tf.matmul(x, wx) + tf.matmul(h, wh) + b
         i, f, o, u = tf.split(axis=1, num_or_size_splits=4, value=z)
         i = tf.nn.sigmoid(i)
         f = tf.nn.sigmoid(f)
         o = tf.nn.sigmoid(o)
         u = tf.tanh(u)
+        c = f*c + i*u
+        h = o*tf.tanh(c)
+        xs[idx] = h
+    s = tf.concat(axis=1, values=[c, h])
+    return xs, s
+def multi_lstm(xs, ms, s, scope, nh, nenvs, index, nsteps, init_scale=1.0):
+    nbatch, nin = [v.value for v in xs[0].get_shape()]
+    #print("DEBUGGING",nbatch, nin)
+    nsteps = len(xs)
+    with tf.variable_scope(scope):
+        wx = tf.get_variable("wx", [nin, nh*4*nenvs], initializer=ortho_init(init_scale))
+        #print(wx, "DABIU X")
+        wh = tf.get_variable("wh", [nh, nh*4*nenvs], initializer=ortho_init(init_scale))
+        #print(wh, "DABIU H")
+        b = tf.get_variable("b", [nh*4*nenvs], initializer=tf.constant_initializer(0.0))
+    #print("DEBUGGING",s)
+    c, h = tf.split(axis=1, num_or_size_splits=2, value=s)
+    #print("DEBUGGING",c, h)
+    for idx, (x, m) in enumerate(zip(xs, ms)):
+        c = c*(1-m)
+        h = h*(1-m)
+        #print("THESE ARE THE GUYS GIVING ME HEADACHE", c, h)
+        # NEW HIDDEN BASED ON INDEX #
+        new_h = []
+        for k, i in enumerate(index):
+            new_h.append(h[i,i*256:(i+1)*256])
+        new_h = tf.stack(new_h)
+        z = tf.matmul(x, wx) + tf.matmul(new_h, wh) + b
+        i, f, o, u = tf.split(axis=1, num_or_size_splits=4, value=z)
+        i = tf.nn.sigmoid(i)
+        f = tf.nn.sigmoid(f)
+        o = tf.nn.sigmoid(o)
+        u = tf.tanh(u)
+
         c = f*c + i*u
         h = o*tf.tanh(c)
         xs[idx] = h
