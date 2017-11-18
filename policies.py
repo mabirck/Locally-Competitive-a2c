@@ -108,7 +108,7 @@ class LstmPolicy(object):
         #print(nenv//8, "SHIIIIT")
         M = tf.placeholder(tf.float32, [nbatch]) #mask (done t-1)
         if(multi_contr == "multi"):
-            S = tf.placeholder(tf.float32, [nenv, nlstm*2 * nenv//8]) #states
+            S = tf.placeholder(tf.float32, [nenv, nlstm*2]) #states
         else:
             S = tf.placeholder(tf.float32, [nenv, nlstm*2]) #states
 
@@ -162,7 +162,7 @@ class LstmPolicy(object):
 
         v0 = vf[:,0]
         a0 = sample(pi, mask)
-        self.initial_state = np.zeros((nenv, nlstm*2*nenv//8), dtype=np.float32)
+        self.initial_state = np.zeros((nenv, nlstm*2), dtype=np.float32)
 
         def step(ob, state, mask, drop):
             a, v, s = sess.run([a0, v0, snew], {X:ob, S:state, M:mask, keep_prob:drop})

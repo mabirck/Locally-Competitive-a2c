@@ -124,6 +124,7 @@ def multi_lstm(xs, ms, s, scope, nh, nenvs, index, nsteps, init_scale=1.0):
         wh = tf.get_variable("wh", [nh, nh*4*nenvs], initializer=ortho_init(init_scale))
         #print(wh, "DABIU H")
         b = tf.get_variable("b", [nh*4*nenvs], initializer=tf.constant_initializer(0.0))
+    print(wx, wh)
     #print("DEBUGGING",s)
     c, h = tf.split(axis=1, num_or_size_splits=2, value=s)
     #print("DEBUGGING",c, h)
@@ -131,13 +132,23 @@ def multi_lstm(xs, ms, s, scope, nh, nenvs, index, nsteps, init_scale=1.0):
         c = c*(1-m)
         h = h*(1-m)
         #print("THESE ARE THE GUYS GIVING ME HEADACHE", c, h)
-        # NEW HIDDEN BASED ON INDEX #
-        new_h = []
-        for k, i in enumerate(index):
-            new_h.append(h[i,i*256:(i+1)*256])
-        new_h = tf.stack(new_h)
+        # NEW HIDDEN BASED ON INDEX #####################
+        new_h = h
+        #for k, i in enumerate(index):
+        #    new_h.append(h[k,i*256:(i+1)*256])
+        #new_h = tf.stack(new_h)
+        #############################################
         z = tf.matmul(x, wx) + tf.matmul(new_h, wh) + b
-        i, f, o, u = tf.split(axis=1, num_or_size_splits=4, value=z)
+        #print("FUCK Z", z)
+        # NEW Z BASED ON INDEX #########################################
+        new_z=list()
+        for k, i in enumerate(index):
+            #print(k, i*nh*4, (i+1)*nh*4)
+            new_z.append(z[k,i*nh*4:(i+1)*nh*4])
+        new_z = tf.stack(new_z)
+        ##############################################################
+        #print("THE import",new_z)
+        i, f, o, u = tf.split(axis=1, num_or_size_splits=4, value=new_z)
         i = tf.nn.sigmoid(i)
         f = tf.nn.sigmoid(f)
         o = tf.nn.sigmoid(o)
